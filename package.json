@@ -1,0 +1,29 @@
+{
+  "name": "messagebox-demo",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Visual demo of MessageBox store-and-forward messaging with animated mailman delivery",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@bsv/message-box-client": "^2.0.0",
+    "@bsv/sdk": "^2.0.1",
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^8.18.0",
+    "@types/three": "^0.182.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "three": "^0.182.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.0"
+  }
+}
