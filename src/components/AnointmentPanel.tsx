@@ -112,7 +112,7 @@ export function AnointmentPanel({ client, myKey, disabled, onLog }: AnointmentPa
     try {
       // Anoint the new host — the overlay resolver picks the most recent advertisement,
       // so senders who re-resolve will automatically find the new host.
-      // Note: explicit revocation via revokeHostAdvertisement() is a client library TODO.
+      // anointHost revokes existing advertisements internally before broadcasting the new one.
       addSwitchLog(`Anointing new host: ${switchUrl.trim()}…`)
       const result = await client.anointHost(switchUrl.trim())
       addSwitchLog(`✅ New host anointed (txid: ${result.txid.slice(0, 12)}…)`)
@@ -354,8 +354,9 @@ export function AnointmentPanel({ client, myKey, disabled, onLog }: AnointmentPa
             <span className="anoint-card-title">Host Switching</span>
           </div>
           <p className="anoint-card-desc">
-            Anoint a new host. The overlay resolver picks the most recent advertisement,
-            so senders who re-resolve will automatically discover the updated host.
+            Switch to a new host cleanly: existing advertisements are revoked and the new host
+            is anointed in a single <code>anointHost</code> call. Senders who re-resolve will
+            automatically discover the updated host.
           </p>
 
           <button
@@ -424,7 +425,7 @@ export function AnointmentPanel({ client, myKey, disabled, onLog }: AnointmentPa
           )}
 
           <div className="anoint-api-hint">
-            <code>anointHost(newHost)</code> → <code>resolveHostForRecipient(myKey)</code>
+            <code>anointHost(newHost)</code> (revokes old ads internally) → <code>resolveHostForRecipient(myKey)</code>
           </div>
         </div>
 
