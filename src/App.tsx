@@ -4,6 +4,7 @@ import { WalletClient } from '@bsv/sdk'
 import { Scene } from './components/Scene'
 import { RightPanel } from './components/RightPanel'
 import { StatusBar } from './components/StatusBar'
+import { AnointmentPanel } from './components/AnointmentPanel'
 import { Delivery, ChatMessage, Participant, SendMethod, RightPanelTab } from './types'
 import './styles.css'
 
@@ -130,53 +131,61 @@ export default function App() {
         clientRef.current = client
         addLog('MessageBox client initialized')
 
-        // Set up live message listening via sockets
-        await client.initializeConnection(MESSAGE_BOX_HOST)
-        addLog('WebSocket connection established')
-
-        await client.listenForLiveMessages({
-          messageBox: MESSAGE_BOX_NAME,
-          overrideHost: MESSAGE_BOX_HOST,
-          onMessage: (msg) => {
-            if (!mounted) return
-            const body = typeof msg.body === 'string' ? msg.body : JSON.stringify(msg.body)
-
-            // Check if this is a presence announcement
-            try {
-              const parsed = typeof msg.body === 'string' ? JSON.parse(msg.body) : msg.body
-              if (parsed && parsed.type === 'presence') {
-                addParticipant(msg.sender)
-                addLog(`🏘️ ${shortKey(msg.sender)} joined the town (via socket)`)
-                return
-              }
-            } catch {
-              // Not JSON, treat as regular message
-            }
-
-            if (seenIdsRef.current.has(msg.messageId)) return
-            seenIdsRef.current.add(msg.messageId)
-
-            addParticipant(msg.sender)
-            addLog(`📨 Live message from ${shortKey(msg.sender)} (via socket)`)
-            triggerDelivery(msg.sender, myKeyRef.current, body, 'socket')
-
-            // Add message after delivery animation completes
-            setTimeout(() => {
-              setMessages(prev => [...prev, {
-                id: msg.messageId,
-                text: body,
-                sender: msg.sender,
-                recipient: myKeyRef.current,
-                timestamp: Date.now(),
-                method: 'socket'
-              }])
-            }, 1500)
-          }
-        })
-
+        // Mark as connected now — WebSocket is optional for anointment features
         if (!mounted) return
         setStatus('connected')
         addLog('✅ Ready! Add a friend to start chatting')
+
+        // Set up live message listening via sockets (best-effort — failure won't block the rest)
+        try {
+          await client.initializeConnection(MESSAGE_BOX_HOST)
+          addLog('WebSocket connection established')
+
+          await client.listenForLiveMessages({
+            messageBox: MESSAGE_BOX_NAME,
+            overrideHost: MESSAGE_BOX_HOST,
+            onMessage: (msg) => {
+              if (!mounted) return
+              const body = typeof msg.body === 'string' ? msg.body : JSON.stringify(msg.body)
+
+              // Check if this is a presence announcement
+              try {
+                const parsed = typeof msg.body === 'string' ? JSON.parse(msg.body) : msg.body
+                if (parsed && parsed.type === 'presence') {
+                  addParticipant(msg.sender)
+                  addLog(`🏘️ ${shortKey(msg.sender)} joined the town (via socket)`)
+                  return
+                }
+              } catch {
+                // Not JSON, treat as regular message
+              }
+
+              if (seenIdsRef.current.has(msg.messageId)) return
+              seenIdsRef.current.add(msg.messageId)
+
+              addParticipant(msg.sender)
+              addLog(`📨 Live message from ${shortKey(msg.sender)} (via socket)`)
+              triggerDelivery(msg.sender, myKeyRef.current, body, 'socket')
+
+              // Add message after delivery animation completes
+              setTimeout(() => {
+                setMessages(prev => [...prev, {
+                  id: msg.messageId,
+                  text: body,
+                  sender: msg.sender,
+                  recipient: myKeyRef.current,
+                  timestamp: Date.now(),
+                  method: 'socket'
+                }])
+              }, 1500)
+            }
+          })
+        } catch (wsErr) {
+          if (mounted) {
+            const wsMsg = wsErr instanceof Error ? wsErr.message : 'WebSocket unavailable'
+            addLog(`⚠️ Live chat unavailable: ${wsMsg}`)
+          }
+        }
 
       } catch (e: unknown) {
         if (!mounted) return
@@ -438,6 +447,13 @@ export default function App() {
           disabled={status !== 'connected'}
         />
       </div>
+
+      <AnointmentPanel
+        client={clientRef.current}
+        myKey={myKey}
+        disabled={status !== 'connected'}
+        onLog={addLog}
+      />
 
       <footer className="app-footer">
         <p>
