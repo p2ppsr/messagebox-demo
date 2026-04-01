@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "description": "Visual demo of MessageBox store-and-forward messaging with animated mailman delivery",
+  "license": "SEE LICENSE IN LICENSE.txt",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

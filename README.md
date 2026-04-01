@@ -42,3 +42,7 @@ const MESSAGE_BOX_HOST = 'http://localhost:8080'  // Your server URL
 const MESSAGE_BOX_NAME = 'demo_chat'               // MessageBox name
 const POLL_INTERVAL = 3000                          // Polling interval (ms)
 ```
+
+## License
+
+See the [LICENSE.txt](LICENSE.txt) file for license text and copyright information.
