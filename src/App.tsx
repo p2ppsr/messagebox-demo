@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { MessageBoxClient } from '@bsv/message-box-client'
 import { WalletClient } from '@bsv/sdk'
+import type { DisplayableIdentity } from '@bsv/sdk'
 import { Scene } from './components/Scene'
 import { RightPanel } from './components/RightPanel'
 import { StatusBar } from './components/StatusBar'
 import { AnointmentPanel } from './components/AnointmentPanel'
+import { IdentitySearch } from './components/IdentitySearch'
 import { Delivery, ChatMessage, Participant, SendMethod, RightPanelTab } from './types'
 import './styles.css'
 
@@ -33,7 +35,6 @@ export default function App() {
   const [participants, setParticipants] = useState<Participant[]>([])
   const [selectedPerson, setSelectedPerson] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<RightPanelTab>('socket')
-  const [friendInput, setFriendInput] = useState('')
   const [composeInput, setComposeInput] = useState('')
   const [log, setLog] = useState<string[]>([])
 
@@ -205,12 +206,32 @@ export default function App() {
   }, [addParticipant, triggerDelivery, addLog])
 
   // Add a friend to the town
-  const handleAddFriend = async () => {
-    const key = friendInput.trim()
+  const handleAddFriend = async (identity: DisplayableIdentity) => {
+    const key = identity.identityKey
     if (!key || !clientRef.current || key === myKey) return
-    setFriendInput('')
-    addParticipant(key)
-    addLog(`🏘️ Added ${shortKey(key)} to town`)
+    setParticipants(prev => {
+      const existing = prev.find(p => p.identityKey === key)
+      if (existing) {
+        // Update with identity info if we didn't have it before
+        if (!existing.displayName && identity.name) {
+          return prev.map(p => p.identityKey === key
+            ? { ...p, displayName: identity.name, avatarURL: identity.avatarURL }
+            : p
+          )
+        }
+        return prev
+      }
+      return [...prev, {
+        identityKey: key,
+        shortName: shortKey(key),
+        color: generateColor(key),
+        joinedAt: Date.now(),
+        displayName: identity.name || undefined,
+        avatarURL: identity.avatarURL || undefined
+      }]
+    })
+    const label = identity.name || shortKey(key)
+    addLog(`🏘️ Added ${label} to town`)
     setSelectedPerson(key)
     setActiveTab('socket')
 
@@ -405,17 +426,10 @@ export default function App() {
 
           {/* Add Friend */}
           <div className="add-friend-bar">
-            <input
-              type="text"
-              value={friendInput}
-              onChange={e => setFriendInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleAddFriend()}
-              placeholder="Paste a friend's identity key to add them to town..."
+            <IdentitySearch
+              onSelect={handleAddFriend}
               disabled={status !== 'connected'}
             />
-            <button onClick={handleAddFriend} disabled={status !== 'connected' || !friendInput.trim()}>
-              + Add
-            </button>
           </div>
 
           {/* Activity Log */}
@@ -437,6 +451,7 @@ export default function App() {
           activeTab={activeTab}
           onTabChange={setActiveTab}
           selectedPerson={selectedPerson}
+          participants={participants}
           socketMessages={socketMessages}
           httpMessages={httpMessages}
           myKey={myKey}

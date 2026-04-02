@@ -11,8 +11,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@bsv/message-box-client": "^2.0.0",
+    "@bsv/message-box-client": "^2.0.6",
     "@bsv/sdk": "^2.0.1",
+    "@bsv/uhrp-react": "^1.0.6",
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",
     "@types/three": "^0.182.0",

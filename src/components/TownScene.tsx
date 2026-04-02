@@ -18,18 +18,24 @@ function hexToVec3(hex: string): THREE.Color {
 }
 
 function getHousePosition(index: number, total: number): THREE.Vector3 {
-  if (total <= 1) return new THREE.Vector3(-3, HOUSE_Y, 2.5)
+  // Houses go on the far side of the road (z > 4.2) so they don't overlap the road or sidewalks
+  const baseZ = 4.5
+  if (total <= 1) return new THREE.Vector3(-3, HOUSE_Y, baseZ)
   if (total === 2) {
     const positions = [
-      new THREE.Vector3(-3.5, HOUSE_Y, 2.5),
-      new THREE.Vector3(3.5, HOUSE_Y, 2.5),
+      new THREE.Vector3(-3.5, HOUSE_Y, baseZ),
+      new THREE.Vector3(3.5, HOUSE_Y, baseZ),
     ]
     return positions[index]!
   }
-  // Spread houses in a wide arc in front of the post office
-  const spread = Math.min(total - 1, 5) * 1.8
-  const x = total === 1 ? 0 : -spread / 2 + (index / (total - 1)) * spread
-  const z = 2.5 + Math.abs(x) * 0.15
+  // Spread houses evenly along the street, stagger into two rows if many
+  const maxPerRow = 6
+  const row = Math.floor(index / maxPerRow)
+  const indexInRow = index % maxPerRow
+  const totalInRow = Math.min(total - row * maxPerRow, maxPerRow)
+  const spread = Math.min(totalInRow - 1, 5) * 2.0
+  const x = totalInRow === 1 ? 0 : -spread / 2 + (indexInRow / (totalInRow - 1)) * spread
+  const z = baseZ + row * 2.2
   return new THREE.Vector3(x, HOUSE_Y, z)
 }
 
@@ -59,12 +65,17 @@ function Ground() {
       ))}
       {/* Sidewalk strips along the road */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.008, 2.6]}>
-        <planeGeometry args={[13, 0.3]} />
+        <planeGeometry args={[14, 0.3]} />
         <meshStandardMaterial color="#b0a898" roughness={0.9} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.008, 3.8]}>
-        <planeGeometry args={[13, 0.3]} />
+        <planeGeometry args={[14, 0.3]} />
         <meshStandardMaterial color="#b0a898" roughness={0.9} />
+      </mesh>
+      {/* Sidewalk on the house side of the road */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.008, 4.1]}>
+        <planeGeometry args={[14, 0.4]} />
+        <meshStandardMaterial color="#c4b8a8" roughness={0.9} />
       </mesh>
     </group>
   )
@@ -258,6 +269,37 @@ function Fence({ start, end }: { start: [number, number, number]; end: [number, 
 }
 
 /* ════════════════════════════════════════════
+   Gable Roof geometry (triangular prism)
+   ════════════════════════════════════════════ */
+
+function useGableRoof(width: number, height: number, depth: number) {
+  return useMemo(() => {
+    const hw = width / 2
+    const hd = depth / 2
+    // Vertices: two triangles (front & back gable ends) + two rectangular slopes
+    const vertices = new Float32Array([
+      // Front gable triangle
+      -hw, 0, hd,    hw, 0, hd,    0, height, hd,
+      // Back gable triangle
+      hw, 0, -hd,   -hw, 0, -hd,   0, height, -hd,
+      // Left slope
+      -hw, 0, hd,    0, height, hd,   0, height, -hd,
+      -hw, 0, hd,    0, height, -hd, -hw, 0, -hd,
+      // Right slope
+      hw, 0, hd,     hw, 0, -hd,     0, height, -hd,
+      hw, 0, hd,     0, height, -hd,  0, height, hd,
+      // Bottom
+      -hw, 0, hd,   -hw, 0, -hd,    hw, 0, -hd,
+      -hw, 0, hd,    hw, 0, -hd,    hw, 0, hd,
+    ])
+    const geo = new THREE.BufferGeometry()
+    geo.setAttribute('position', new THREE.BufferAttribute(vertices, 3))
+    geo.computeVertexNormals()
+    return geo
+  }, [width, height, depth])
+}
+
+/* ════════════════════════════════════════════
    House (3D)
    ════════════════════════════════════════════ */
 
@@ -275,6 +317,7 @@ function House3D({ participant, position, isMe, isSelected, onClick }: {
     c.multiplyScalar(0.7)
     return c
   }, [participant.color])
+  const roofGeo = useGableRoof(1.3, 0.5, 1.05)
 
   // Hover state
   const [hovered, setHovered] = useState(false)
@@ -307,8 +350,8 @@ function House3D({ participant, position, isMe, isSelected, onClick }: {
 
       {/* Foundation */}
       <mesh position={[0, 0.02, 0]}>
-        <boxGeometry args={[1.2, 0.05, 1.0]} />
-        <meshStandardMaterial color="#8B7355" />
+        <boxGeometry args={[1.25, 0.06, 1.05]} />
+        <meshStandardMaterial color="#7a6a52" />
       </mesh>
 
       {/* Walls */}
@@ -328,13 +371,17 @@ function House3D({ participant, position, isMe, isSelected, onClick }: {
         <meshStandardMaterial color="#C4B69C" roughness={0.9} />
       </mesh>
 
-      {/* Roof */}
-      <mesh position={[0, 1.05, 0]} castShadow>
-        <coneGeometry args={[0.85, 0.55, 4]} />
+      {/* Gable roof */}
+      <mesh geometry={roofGeo} position={[0, 0.85, 0]} castShadow>
         <meshStandardMaterial color={roofColor} roughness={0.7} />
       </mesh>
+      {/* Roof overhang trim along the eaves */}
+      <mesh position={[0, 0.85, 0]}>
+        <boxGeometry args={[1.35, 0.03, 1.1]} />
+        <meshStandardMaterial color="#5D4037" roughness={0.8} />
+      </mesh>
 
-      {/* Door */}
+      {/* Front gable wall fill (triangle above front wall) */}
       <mesh position={[0, 0.3, 0.451]}>
         <boxGeometry args={[0.2, 0.4, 0.02]} />
         <meshStandardMaterial color="#5D4037" roughness={0.8} />
@@ -344,10 +391,23 @@ function House3D({ participant, position, isMe, isSelected, onClick }: {
         <boxGeometry args={[0.24, 0.44, 0.01]} />
         <meshStandardMaterial color="#4A3528" roughness={0.9} />
       </mesh>
+      {/* Door panel detail */}
+      <mesh position={[0, 0.35, 0.46]}>
+        <boxGeometry args={[0.14, 0.14, 0.005]} />
+        <meshStandardMaterial color="#4E342E" roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 0.2, 0.46]}>
+        <boxGeometry args={[0.14, 0.1, 0.005]} />
+        <meshStandardMaterial color="#4E342E" roughness={0.9} />
+      </mesh>
       {/* Step */}
       <mesh position={[0, 0.06, 0.52]}>
-        <boxGeometry args={[0.3, 0.04, 0.1]} />
+        <boxGeometry args={[0.35, 0.04, 0.12]} />
         <meshStandardMaterial color="#8B7355" roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 0.03, 0.55]}>
+        <boxGeometry args={[0.4, 0.04, 0.1]} />
+        <meshStandardMaterial color="#7a6a52" roughness={0.9} />
       </mesh>
       {/* Doorknob */}
       <mesh position={[0.06, 0.28, 0.47]}>
@@ -358,32 +418,59 @@ function House3D({ participant, position, isMe, isSelected, onClick }: {
       {/* Windows (warm glow) */}
       {[[-0.32, 0.5, 0.451], [0.32, 0.5, 0.451]].map((pos, i) => (
         <group key={i}>
+          {/* Window recess */}
+          <mesh position={[pos[0]!, pos[1]!, pos[2]! - 0.01]}>
+            <boxGeometry args={[0.24, 0.24, 0.02]} />
+            <meshStandardMaterial color="#3E2723" roughness={0.9} />
+          </mesh>
+          {/* Glass */}
           <mesh position={pos as [number, number, number]}>
             <boxGeometry args={[0.2, 0.2, 0.02]} />
             <meshBasicMaterial color="#FFE4A0" />
           </mesh>
-          {/* Window frame */}
+          {/* Window frame - horizontal */}
           <mesh position={pos as [number, number, number]}>
-            <boxGeometry args={[0.22, 0.005, 0.025]} />
+            <boxGeometry args={[0.22, 0.02, 0.025]} />
             <meshStandardMaterial color="#5D4037" />
           </mesh>
+          {/* Window frame - vertical */}
           <mesh position={pos as [number, number, number]}>
-            <boxGeometry args={[0.005, 0.22, 0.025]} />
+            <boxGeometry args={[0.02, 0.22, 0.025]} />
             <meshStandardMaterial color="#5D4037" />
+          </mesh>
+          {/* Window sill */}
+          <mesh position={[pos[0]!, pos[1]! - 0.12, pos[2]! + 0.02]}>
+            <boxGeometry args={[0.26, 0.02, 0.04]} />
+            <meshStandardMaterial color="#C4B69C" />
           </mesh>
           {/* Window light */}
           <pointLight position={[pos[0]!, pos[1]!, pos[2]! + 0.1]} color="#FFE4A0" intensity={0.15} distance={1.5} />
         </group>
       ))}
 
-      {/* Chimney */}
-      <mesh position={[0.3, 1.2, -0.15]} castShadow>
-        <boxGeometry args={[0.15, 0.35, 0.15]} />
+      {/* Side windows */}
+      {[[-0.551, 0.5, 0.15], [-0.551, 0.5, -0.2], [0.551, 0.5, 0.15], [0.551, 0.5, -0.2]].map((pos, i) => (
+        <group key={`sw-${i}`}>
+          <mesh position={pos as [number, number, number]} rotation={[0, Math.PI / 2, 0]}>
+            <boxGeometry args={[0.15, 0.15, 0.02]} />
+            <meshBasicMaterial color="#FFE4A0" />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Chimney — sits on the roof slope */}
+      <mesh position={[0.3, 1.25, -0.15]} castShadow>
+        <boxGeometry args={[0.15, 0.4, 0.15]} />
+        <meshStandardMaterial color="#8B5E3C" />
+      </mesh>
+      {/* Chimney cap */}
+      <mesh position={[0.3, 1.47, -0.15]}>
+        <boxGeometry args={[0.19, 0.03, 0.19]} />
         <meshStandardMaterial color="#6B4C3B" />
       </mesh>
 
       {/* Chimney smoke particles */}
-      <ChimneySmoke position={[0.3, 1.4, -0.15]} />
+      <ChimneySmoke position={[0.3, 1.5, -0.15]} />
 
       {/* Mailbox */}
       <group position={[0.75, 0, 0.3]}>
@@ -411,7 +498,7 @@ function House3D({ participant, position, isMe, isSelected, onClick }: {
           border: isSelected ? '1px solid rgba(255,255,255,0.3)' : 'none',
           userSelect: 'none',
         }}>
-          {isMe ? '🏠 You' : participant.shortName}
+          {isMe ? '🏠 You' : (participant.displayName || participant.shortName)}
         </div>
       </Html>
     </group>
@@ -825,8 +912,8 @@ function SocketSignalDelivery({ delivery, fromPos, toPos }: {
 function CameraSetup() {
   const { camera } = useThree()
   useEffect(() => {
-    camera.position.set(0, 5.5, 8)
-    camera.lookAt(0, 0.5, 1.5)
+    camera.position.set(0, 6.5, 10)
+    camera.lookAt(0, 0.5, 2.5)
   }, [camera])
   return null
 }
@@ -853,7 +940,7 @@ export function TownScene({ participants, deliveries, myKey, selectedPerson, onS
     <div className="town-canvas-container">
       <Canvas
         shadows
-        camera={{ position: [0, 5.5, 8], fov: 55 }}
+        camera={{ position: [0, 6.5, 10], fov: 55 }}
         gl={{ antialias: true, alpha: false }}
         dpr={[1, 2]}
         style={{ background: '#87CEEB' }}
@@ -896,18 +983,18 @@ export function TownScene({ participants, deliveries, myKey, selectedPerson, onS
         <Streetlamp position={[-1.5, 0, 1.5]} />
         <Streetlamp position={[1.5, 0, 1.5]} />
 
-        {/* Trees */}
-        <Tree position={[-6, 0, 4.5]} scale={1.0} />
-        <Tree position={[6, 0, 4.0]} scale={1.2} />
+        {/* Trees — placed away from house positions */}
+        <Tree position={[-7, 0, 5.5]} scale={1.0} />
+        <Tree position={[7, 0, 5.0]} scale={1.2} />
         <Tree position={[-5.5, 0, 0]} scale={0.8} />
         <Tree position={[5.5, 0, 0.5]} scale={0.9} />
         <Tree position={[-2.5, 0, -1.5]} scale={0.7} />
         <Tree position={[3, 0, -1.5]} scale={0.8} />
         <Tree position={[0, 0, -2]} scale={0.65} />
 
-        {/* Fences */}
-        <Fence start={[-6.5, 0, 5]} end={[-2, 0, 5]} />
-        <Fence start={[2, 0, 5]} end={[6.5, 0, 5]} />
+        {/* Fences — behind the houses */}
+        <Fence start={[-7.5, 0, 7]} end={[-2, 0, 7]} />
+        <Fence start={[2, 0, 7]} end={[7.5, 0, 7]} />
 
         {/* Telephone poles between houses */}
         {participants.length > 1 && positions.slice(0, -1).map((pos, i) => {

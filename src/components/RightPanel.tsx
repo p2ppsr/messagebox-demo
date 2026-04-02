@@ -1,11 +1,13 @@
 import { useEffect, useRef } from 'react'
-import { ChatMessage, RightPanelTab } from '../types'
+import { ChatMessage, Participant, RightPanelTab } from '../types'
 import { shortKey, generateColor } from '../App'
+import { Img } from '@bsv/uhrp-react'
 
 interface RightPanelProps {
   activeTab: RightPanelTab
   onTabChange: (tab: RightPanelTab) => void
   selectedPerson: string | null
+  participants: Participant[]
   socketMessages: ChatMessage[]
   httpMessages: ChatMessage[]
   myKey: string
@@ -20,6 +22,7 @@ export function RightPanel({
   activeTab,
   onTabChange,
   selectedPerson,
+  participants,
   socketMessages,
   httpMessages,
   myKey,
@@ -30,12 +33,28 @@ export function RightPanel({
   disabled
 }: RightPanelProps) {
   const endRef = useRef<HTMLDivElement>(null)
+  const prevSocketCountRef = useRef(socketMessages.length)
+  const prevHttpCountRef = useRef(httpMessages.length)
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [socketMessages, httpMessages])
+    if (socketMessages.length > prevSocketCountRef.current) {
+      endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+    prevSocketCountRef.current = socketMessages.length
+  }, [socketMessages.length])
+
+  useEffect(() => {
+    if (httpMessages.length > prevHttpCountRef.current) {
+      endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+    prevHttpCountRef.current = httpMessages.length
+  }, [httpMessages.length])
 
   const isMine = (msg: ChatMessage) => msg.sender === myKey
+  const selectedParticipant = selectedPerson
+    ? participants.find(p => p.identityKey === selectedPerson)
+    : undefined
+  const displayName = selectedParticipant?.displayName || (selectedPerson ? shortKey(selectedPerson) : '')
 
   return (
     <div className="right-panel">
@@ -80,14 +99,27 @@ export function RightPanel({
           ) : (
             <>
               <div className="conversation-header">
-                <div
-                  className="conv-avatar"
-                  style={{ background: generateColor(selectedPerson) }}
-                >
-                  {selectedPerson.slice(0, 2).toUpperCase()}
-                </div>
+                {selectedParticipant?.avatarURL ? (
+                  <Img
+                    className="conv-avatar-img"
+                    src={selectedParticipant.avatarURL}
+                    alt=""
+                    fallback={
+                      <div className="conv-avatar" style={{ background: generateColor(selectedPerson) }}>
+                        {(selectedParticipant.displayName || selectedPerson).charAt(0).toUpperCase()}
+                      </div>
+                    }
+                  />
+                ) : (
+                  <div className="conv-avatar" style={{ background: generateColor(selectedPerson) }}>
+                    {(selectedParticipant?.displayName || selectedPerson).charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <div className="conv-info">
-                  <span className="conv-name">{shortKey(selectedPerson)}</span>
+                  <span className="conv-name">{displayName}</span>
+                  {selectedParticipant?.displayName && (
+                    <span className="conv-key">{shortKey(selectedPerson)}</span>
+                  )}
                   <span className="conv-method">⚡ Live connection</span>
                 </div>
               </div>
@@ -175,14 +207,27 @@ export function RightPanel({
           ) : (
             <>
               <div className="conversation-header">
-                <div
-                  className="conv-avatar"
-                  style={{ background: generateColor(selectedPerson) }}
-                >
-                  {selectedPerson.slice(0, 2).toUpperCase()}
-                </div>
+                {selectedParticipant?.avatarURL ? (
+                  <Img
+                    className="conv-avatar-img"
+                    src={selectedParticipant.avatarURL}
+                    alt=""
+                    fallback={
+                      <div className="conv-avatar" style={{ background: generateColor(selectedPerson) }}>
+                        {(selectedParticipant.displayName || selectedPerson).charAt(0).toUpperCase()}
+                      </div>
+                    }
+                  />
+                ) : (
+                  <div className="conv-avatar" style={{ background: generateColor(selectedPerson) }}>
+                    {(selectedParticipant?.displayName || selectedPerson).charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <div className="conv-info">
-                  <span className="conv-name">{shortKey(selectedPerson)}</span>
+                  <span className="conv-name">{displayName}</span>
+                  {selectedParticipant?.displayName && (
+                    <span className="conv-key">{shortKey(selectedPerson)}</span>
+                  )}
                   <span className="conv-method">📮 Store &amp; forward</span>
                 </div>
               </div>

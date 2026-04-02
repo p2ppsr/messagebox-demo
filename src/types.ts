@@ -12,6 +12,8 @@ export interface Participant {
   shortName: string
   color: string
   joinedAt: number
+  displayName?: string
+  avatarURL?: string
 }
 
 export type DeliveryPhase = 'to-sender' | 'at-sender' | 'to-postoffice' | 'to-recipient' | 'returning' | 'direct'
