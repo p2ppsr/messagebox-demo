@@ -546,6 +546,22 @@ function ChimneySmoke({ position }: { position: [number, number, number] }) {
    Post Office (3D)
    ════════════════════════════════════════════ */
 
+function PostOfficeRoof() {
+  const geo = useGableRoof(2.3, 0.6, 1.6)
+  return (
+    <group>
+      <mesh geometry={geo} position={[0, 1.0, 0]} castShadow>
+        <meshStandardMaterial color="#8B1A1A" roughness={0.7} />
+      </mesh>
+      {/* Eave trim */}
+      <mesh position={[0, 1.0, 0]}>
+        <boxGeometry args={[2.4, 0.04, 1.65]} />
+        <meshStandardMaterial color="#5D2020" roughness={0.8} />
+      </mesh>
+    </group>
+  )
+}
+
 function PostOffice3D() {
   return (
     <group position={[POST_OFFICE_POS.x, POST_OFFICE_POS.y, POST_OFFICE_POS.z]}>
@@ -561,11 +577,8 @@ function PostOffice3D() {
         <meshStandardMaterial color="#E8DCC8" />
       </mesh>
 
-      {/* Roof */}
-      <mesh position={[0, 1.2, 0]} castShadow>
-        <coneGeometry args={[1.5, 0.6, 4]} />
-        <meshStandardMaterial color="#8B1A1A" />
-      </mesh>
+      {/* Gable roof */}
+      <PostOfficeRoof />
 
       {/* Pillars */}
       {[[-0.7, 0.5, 0.71], [0.7, 0.5, 0.71]].map((pos, i) => (
