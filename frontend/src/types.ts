@@ -5,6 +5,7 @@ export interface ChatMessage {
   recipient: string
   timestamp: number
   method: SendMethod
+  amount?: number
 }
 
 export interface Participant {
@@ -26,8 +27,9 @@ export interface Delivery {
   phase: DeliveryPhase
   startTime: number
   method: SendMethod
+  host?: string
 }
 
-export type SendMethod = 'http' | 'socket'
+export type SendMethod = 'http' | 'socket' | 'payment'
 
 export type RightPanelTab = 'socket' | 'http'

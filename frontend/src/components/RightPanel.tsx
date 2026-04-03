@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ChatMessage, Participant, RightPanelTab } from '../types'
 import { shortKey, generateColor } from '../App'
 import { Img } from '@bsv/uhrp-react'
@@ -14,6 +14,7 @@ interface RightPanelProps {
   composeInput: string
   onComposeChange: (val: string) => void
   onSend: (e: React.FormEvent) => void
+  onSendPayment: (amount: number, via: 'socket' | 'http') => void
   onCheckMailbox: () => void
   disabled: boolean
 }
@@ -29,12 +30,14 @@ export function RightPanel({
   composeInput,
   onComposeChange,
   onSend,
+  onSendPayment,
   onCheckMailbox,
   disabled
 }: RightPanelProps) {
   const endRef = useRef<HTMLDivElement>(null)
   const prevSocketCountRef = useRef(socketMessages.length)
   const prevHttpCountRef = useRef(httpMessages.length)
+  const [paymentAmount, setPaymentAmount] = useState('')
 
   useEffect(() => {
     if (socketMessages.length > prevSocketCountRef.current) {
@@ -151,13 +154,16 @@ export function RightPanel({
                           {shortKey(msg.sender)}
                         </span>
                       )}
-                      <div className={`msg-bubble ${isMine(msg) ? 'bubble-mine' : 'bubble-other'}`}>
-                        {msg.text}
+                      <div className={`msg-bubble ${isMine(msg) ? 'bubble-mine' : 'bubble-other'} ${msg.amount ? 'payment-bubble' : ''}`}>
+                        {msg.amount ? `💸 ${msg.amount.toLocaleString()} sats` : msg.text}
                       </div>
                       <span className="msg-time">
                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         {' · '}
-                        <span className="method-tag method-socket">⚡ Live</span>
+                        {msg.amount
+                          ? <span className="method-tag method-payment">💸 Payment</span>
+                          : <span className="method-tag method-socket">⚡ Live</span>
+                        }
                       </span>
                     </div>
                   </div>
@@ -179,6 +185,23 @@ export function RightPanel({
                     <line x1="22" y1="2" x2="11" y2="13" />
                     <polygon points="22 2 15 22 11 13 2 9 22 2" />
                   </svg>
+                </button>
+              </form>
+              <form className="chat-input-form payment-form" onSubmit={e => {
+                e.preventDefault()
+                const amt = parseInt(paymentAmount, 10)
+                if (amt > 0) { onSendPayment(amt, 'socket'); setPaymentAmount('') }
+              }}>
+                <input
+                  type="number"
+                  min="1"
+                  value={paymentAmount}
+                  onChange={e => setPaymentAmount(e.target.value)}
+                  placeholder="Send sats..."
+                  disabled={disabled}
+                />
+                <button type="submit" disabled={disabled || !paymentAmount || parseInt(paymentAmount, 10) <= 0} className="payment-send-btn">
+                  💸
                 </button>
               </form>
             </>
@@ -267,13 +290,16 @@ export function RightPanel({
                           {shortKey(msg.sender)}
                         </span>
                       )}
-                      <div className={`msg-bubble ${isMine(msg) ? 'bubble-mine' : 'bubble-other'} letter-style`}>
-                        {msg.text}
+                      <div className={`msg-bubble ${isMine(msg) ? 'bubble-mine' : 'bubble-other'} ${msg.amount ? 'payment-bubble' : 'letter-style'}`}>
+                        {msg.amount ? `💸 ${msg.amount.toLocaleString()} sats` : msg.text}
                       </div>
                       <span className="msg-time">
                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         {' · '}
-                        <span className="method-tag method-http">📮 Letter</span>
+                        {msg.amount
+                          ? <span className="method-tag method-payment">💸 Payment</span>
+                          : <span className="method-tag method-http">📮 Letter</span>
+                        }
                       </span>
                     </div>
                   </div>
@@ -297,10 +323,28 @@ export function RightPanel({
                   </svg>
                 </button>
               </form>
+              <form className="chat-input-form payment-form" onSubmit={e => {
+                e.preventDefault()
+                const amt = parseInt(paymentAmount, 10)
+                if (amt > 0) { onSendPayment(amt, 'http'); setPaymentAmount('') }
+              }}>
+                <input
+                  type="number"
+                  min="1"
+                  value={paymentAmount}
+                  onChange={e => setPaymentAmount(e.target.value)}
+                  placeholder="Send sats..."
+                  disabled={disabled}
+                />
+                <button type="submit" disabled={disabled || !paymentAmount || parseInt(paymentAmount, 10) <= 0} className="payment-send-btn">
+                  💸
+                </button>
+              </form>
             </>
           )}
         </div>
       )}
+
     </div>
   )
 }

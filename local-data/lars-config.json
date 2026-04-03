@@ -1,0 +1,15 @@
+{
+  "enablePermissionMonitor": true,
+  "projectKeys": {
+    "mainnet": {},
+    "testnet": {}
+  },
+  "enableRequestLogging": true,
+  "enableGASPSync": false,
+  "overlayAdvancedConfig": {
+    "syncConfiguration": {},
+    "logTime": false,
+    "logPrefix": "[LARS OVERLAY ENGINE] ",
+    "throwOnBroadcastFailure": false
+  }
+}

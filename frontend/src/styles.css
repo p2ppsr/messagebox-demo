@@ -683,6 +683,16 @@ html, body, #root {
   color: var(--orange);
 }
 
+.method-payment {
+  color: #22c55e;
+}
+
+.payment-bubble {
+  background: linear-gradient(135deg, #16a34a, #22c55e) !important;
+  color: white !important;
+  font-weight: 600;
+}
+
 .method-socket {
   color: var(--green);
 }
@@ -879,6 +889,26 @@ html, body, #root {
   cursor: not-allowed;
 }
 
+/* ── Payment Form ── */
+.payment-form {
+  border-top: 1px dashed var(--border);
+  padding: 6px 12px;
+}
+
+.payment-form input {
+  max-width: 140px;
+}
+
+.payment-send-btn {
+  background: #22c55e !important;
+  font-size: 16px !important;
+  padding: 8px 12px !important;
+}
+
+.payment-send-btn:hover:not(:disabled) {
+  background: #16a34a !important;
+}
+
 /* ── Footer ── */
 .app-footer {
   padding: 10px 16px;
@@ -1032,6 +1062,12 @@ html, body, #root {
 .delivery-pill.direct {
   background: rgba(0, 255, 136, 0.15);
   color: #00ff88;
+}
+
+/* Payment delivery pill */
+.delivery-payment {
+  background: rgba(34, 197, 94, 0.2) !important;
+  color: #15803d !important;
 }
 
 /* ── Scrollbar ── */

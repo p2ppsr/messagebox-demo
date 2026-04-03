@@ -9,7 +9,9 @@ import { shortKey, generateColor } from '../App'
    Constants & helpers
    ════════════════════════════════════════════ */
 
-const POST_OFFICE_POS = new THREE.Vector3(0, 0, 0)
+const POST_OFFICE_A_POS = new THREE.Vector3(-3, 0, 0)  // Babbage (default)
+const POST_OFFICE_B_POS = new THREE.Vector3(3.5, 0, 0)  // BSVA / alternate host
+const BABBAGE_HOST = 'https://messagebox.babbage.systems'
 const HOUSE_RADIUS = 4.0
 const HOUSE_Y = 0
 
@@ -65,16 +67,16 @@ function Ground() {
       ))}
       {/* Sidewalk strips along the road */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.008, 2.6]}>
-        <planeGeometry args={[14, 0.3]} />
+        <planeGeometry args={[30, 0.3]} />
         <meshStandardMaterial color="#b0a898" roughness={0.9} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.008, 3.8]}>
-        <planeGeometry args={[14, 0.3]} />
+        <planeGeometry args={[30, 0.3]} />
         <meshStandardMaterial color="#b0a898" roughness={0.9} />
       </mesh>
       {/* Sidewalk on the house side of the road */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.008, 4.1]}>
-        <planeGeometry args={[14, 0.4]} />
+        <planeGeometry args={[30, 0.4]} />
         <meshStandardMaterial color="#c4b8a8" roughness={0.9} />
       </mesh>
     </group>
@@ -86,34 +88,60 @@ function Road() {
     <group>
       {/* Main road across the front */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 3.2]}>
-        <planeGeometry args={[14, 1.0]} />
+        <planeGeometry args={[30, 1.0]} />
         <meshStandardMaterial color="#555555" roughness={0.85} />
       </mesh>
       {/* Road edges / curbs */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, 2.68]}>
-        <planeGeometry args={[14, 0.05]} />
+        <planeGeometry args={[30, 0.05]} />
         <meshStandardMaterial color="#999" roughness={0.7} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, 3.72]}>
-        <planeGeometry args={[14, 0.05]} />
+        <planeGeometry args={[30, 0.05]} />
         <meshStandardMaterial color="#999" roughness={0.7} />
       </mesh>
-      {/* Road to post office */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 1.5]}>
+      {/* Road to post office A (Babbage) */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[POST_OFFICE_A_POS.x, 0.01, 1.5]}>
         <planeGeometry args={[1.2, 2.5]} />
         <meshStandardMaterial color="#555555" roughness={0.85} />
       </mesh>
-      {/* Cobblestone area near post office */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0.5]}>
+      {/* Road to post office B (BSVA) */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[POST_OFFICE_B_POS.x, 0.01, 1.5]}>
+        <planeGeometry args={[1.2, 2.5]} />
+        <meshStandardMaterial color="#555555" roughness={0.85} />
+      </mesh>
+      {/* Path connecting the two post offices */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[(POST_OFFICE_A_POS.x + POST_OFFICE_B_POS.x) / 2, 0.01, 0.5]}>
+        <planeGeometry args={[Math.abs(POST_OFFICE_B_POS.x - POST_OFFICE_A_POS.x) - 1, 1.0]} />
+        <meshStandardMaterial color="#6a6358" roughness={0.95} />
+      </mesh>
+      {/* Cobblestone area near post office A */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[POST_OFFICE_A_POS.x, 0.015, 0.5]}>
         <planeGeometry args={[2.8, 1.5]} />
         <meshStandardMaterial color="#6a6358" roughness={0.95} />
       </mesh>
-      {/* Cobblestone detail stones */}
+      {/* Cobblestone area near post office B */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[POST_OFFICE_B_POS.x, 0.015, 0.5]}>
+        <planeGeometry args={[2.8, 1.5]} />
+        <meshStandardMaterial color="#6a6358" roughness={0.95} />
+      </mesh>
+      {/* Cobblestone detail stones — post office A */}
       {Array.from({ length: 20 }, (_, i) => {
-        const cx = (i % 5 - 2) * 0.5 + (Math.sin(i * 7) * 0.15)
+        const cx = POST_OFFICE_A_POS.x + (i % 5 - 2) * 0.5 + (Math.sin(i * 7) * 0.15)
         const cz = Math.floor(i / 5) * 0.35 + 0.1
         return (
-          <mesh key={`cob-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[cx, 0.018, cz]}>
+          <mesh key={`cob-a-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[cx, 0.018, cz]}>
+            <circleGeometry args={[0.08, 6]} />
+            <meshStandardMaterial color={i % 3 === 0 ? '#7a7268' : '#6e685e'} roughness={1} />
+          </mesh>
+        )
+      })}
+      {/* Cobblestone detail stones — post office B */}
+      {Array.from({ length: 20 }, (_, i) => {
+        const cx = POST_OFFICE_B_POS.x + (i % 5 - 2) * 0.5 + (Math.sin(i * 7) * 0.15)
+        const cz = Math.floor(i / 5) * 0.35 + 0.1
+        return (
+          <mesh key={`cob-b-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[cx, 0.018, cz]}>
             <circleGeometry args={[0.08, 6]} />
             <meshStandardMaterial color={i % 3 === 0 ? '#7a7268' : '#6e685e'} roughness={1} />
           </mesh>
@@ -562,57 +590,131 @@ function PostOfficeRoof() {
   )
 }
 
-function PostOffice3D() {
+function PostOffice3D({ position, label, accentColor = '#1565C0' }: {
+  position: THREE.Vector3
+  label: string
+  accentColor?: string
+}) {
+  const poRoofGeo = useGableRoof(2.8, 0.7, 2.0)
   return (
-    <group position={[POST_OFFICE_POS.x, POST_OFFICE_POS.y, POST_OFFICE_POS.z]}>
-      {/* Foundation / platform */}
-      <mesh position={[0, 0.05, 0]}>
-        <boxGeometry args={[2.2, 0.1, 1.6]} />
-        <meshStandardMaterial color="#8B7355" />
+    <group position={[position.x, position.y, position.z]}>
+      {/* Wide foundation / platform with steps */}
+      <mesh position={[0, 0.04, 0]}>
+        <boxGeometry args={[2.8, 0.08, 2.0]} />
+        <meshStandardMaterial color="#8a8078" roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 0.0, 0.85]}>
+        <boxGeometry args={[2.0, 0.06, 0.3]} />
+        <meshStandardMaterial color="#9a9088" roughness={0.9} />
       </mesh>
 
-      {/* Main building */}
-      <mesh position={[0, 0.55, 0]} castShadow>
-        <boxGeometry args={[2.0, 0.9, 1.4]} />
+      {/* Main building — taller and wider than houses */}
+      <mesh position={[0, 0.65, 0]} castShadow>
+        <boxGeometry args={[2.5, 1.2, 1.8]} />
         <meshStandardMaterial color="#E8DCC8" />
       </mesh>
 
-      {/* Gable roof */}
-      <PostOfficeRoof />
+      {/* Accent stripe / trim band across the front */}
+      <mesh position={[0, 0.18, 0.91]}>
+        <boxGeometry args={[2.52, 0.06, 0.01]} />
+        <meshStandardMaterial color={accentColor} />
+      </mesh>
 
-      {/* Pillars */}
-      {[[-0.7, 0.5, 0.71], [0.7, 0.5, 0.71]].map((pos, i) => (
-        <mesh key={i} position={pos as [number, number, number]}>
-          <cylinderGeometry args={[0.06, 0.08, 0.9, 8]} />
+      {/* Gable roof — larger */}
+      <mesh geometry={poRoofGeo} position={[0, 1.25, 0]} castShadow>
+        <meshStandardMaterial color="#8B1A1A" roughness={0.7} />
+      </mesh>
+      <mesh position={[0, 1.25, 0]}>
+        <boxGeometry args={[2.9, 0.04, 2.05]} />
+        <meshStandardMaterial color="#5D2020" roughness={0.8} />
+      </mesh>
+
+      {/* Four pillars across the front — civic look */}
+      {[-0.9, -0.3, 0.3, 0.9].map((x, i) => (
+        <mesh key={i} position={[x, 0.6, 0.91]}>
+          <cylinderGeometry args={[0.05, 0.07, 1.1, 8]} />
           <meshStandardMaterial color="#D4C9A8" />
         </mesh>
       ))}
 
-      {/* Door */}
-      <mesh position={[0, 0.4, 0.71]}>
-        <boxGeometry args={[0.4, 0.6, 0.02]} />
-        <meshStandardMaterial color="#5D4037" />
+      {/* Awning / portico above entrance */}
+      <mesh position={[0, 1.18, 1.05]}>
+        <boxGeometry args={[2.1, 0.04, 0.35]} />
+        <meshStandardMaterial color={accentColor} />
       </mesh>
 
-      {/* Windows */}
-      {[[-0.55, 0.6, 0.71], [0.55, 0.6, 0.71]].map((pos, i) => (
-        <group key={i}>
-          <mesh position={pos as [number, number, number]}>
-            <boxGeometry args={[0.25, 0.25, 0.02]} />
+      {/* Double doors */}
+      <mesh position={[-0.12, 0.45, 0.91]}>
+        <boxGeometry args={[0.22, 0.7, 0.02]} />
+        <meshStandardMaterial color="#5D4037" roughness={0.8} />
+      </mesh>
+      <mesh position={[0.12, 0.45, 0.91]}>
+        <boxGeometry args={[0.22, 0.7, 0.02]} />
+        <meshStandardMaterial color="#5D4037" roughness={0.8} />
+      </mesh>
+      {/* Door divider strip */}
+      <mesh position={[0, 0.45, 0.92]}>
+        <boxGeometry args={[0.02, 0.7, 0.01]} />
+        <meshStandardMaterial color="#3E2723" />
+      </mesh>
+      {/* Door knobs */}
+      <mesh position={[-0.04, 0.42, 0.93]}>
+        <sphereGeometry args={[0.015, 8, 8]} />
+        <meshStandardMaterial color="#D4A850" metalness={0.8} />
+      </mesh>
+      <mesh position={[0.04, 0.42, 0.93]}>
+        <sphereGeometry args={[0.015, 8, 8]} />
+        <meshStandardMaterial color="#D4A850" metalness={0.8} />
+      </mesh>
+
+      {/* Four windows across front */}
+      {[-0.85, -0.45, 0.45, 0.85].map((x, i) => (
+        <group key={`w-${i}`}>
+          <mesh position={[x, 0.7, 0.91]}>
+            <boxGeometry args={[0.22, 0.3, 0.02]} />
             <meshBasicMaterial color="#FFD280" />
           </mesh>
-          <pointLight position={[pos[0]!, pos[1]!, pos[2]! + 0.2]} color="#FFD280" intensity={0.2} distance={2} />
+          {/* Window cross frame */}
+          <mesh position={[x, 0.7, 0.92]}>
+            <boxGeometry args={[0.22, 0.02, 0.01]} />
+            <meshStandardMaterial color="#5D4037" />
+          </mesh>
+          <mesh position={[x, 0.7, 0.92]}>
+            <boxGeometry args={[0.02, 0.3, 0.01]} />
+            <meshStandardMaterial color="#5D4037" />
+          </mesh>
+          <pointLight position={[x, 0.7, 1.1]} color="#FFD280" intensity={0.15} distance={1.5} />
         </group>
       ))}
 
-      {/* Sign */}
-      <mesh position={[0, 1.0, 0.72]}>
-        <boxGeometry args={[1.2, 0.2, 0.03]} />
+      {/* Clock tower / bell tower on top */}
+      <mesh position={[0, 1.75, 0]} castShadow>
+        <boxGeometry args={[0.5, 0.6, 0.5]} />
+        <meshStandardMaterial color="#E0D5C0" />
+      </mesh>
+      {/* Tower roof — smooth cone */}
+      <mesh position={[0, 2.15, 0]} castShadow>
+        <coneGeometry args={[0.38, 0.4, 16]} />
+        <meshStandardMaterial color="#5D2020" roughness={0.7} />
+      </mesh>
+      {/* Clock face — dark ring behind, white face in front */}
+      <mesh position={[0, 1.78, 0.255]}>
+        <circleGeometry args={[0.13, 16]} />
+        <meshStandardMaterial color="#333" />
+      </mesh>
+      <mesh position={[0, 1.78, 0.26]}>
+        <circleGeometry args={[0.11, 16]} />
+        <meshBasicMaterial color="#FFFFF0" />
+      </mesh>
+
+      {/* Sign board on building face */}
+      <mesh position={[0, 1.05, 0.92]}>
+        <boxGeometry args={[1.5, 0.18, 0.03]} />
         <meshStandardMaterial color="#1a1a1a" />
       </mesh>
       <Text
-        position={[0, 1.0, 0.74]}
-        fontSize={0.1}
+        position={[0, 1.05, 0.94]}
+        fontSize={0.09}
         color="white"
         anchorX="center"
         anchorY="middle"
@@ -620,29 +722,48 @@ function PostOffice3D() {
         POST OFFICE
       </Text>
 
+      {/* Floating label above the building */}
+      <Html position={[0, 2.5, 0.3]} center distanceFactor={8} style={{ pointerEvents: 'none' }}>
+        <div style={{
+          background: accentColor,
+          color: 'white',
+          padding: '4px 14px',
+          borderRadius: '5px',
+          fontSize: '14px',
+          fontWeight: 'bold',
+          fontFamily: 'monospace',
+          whiteSpace: 'nowrap',
+          border: '2px solid rgba(255,255,255,0.4)',
+          userSelect: 'none',
+          textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+        }}>
+          📮 {label}
+        </div>
+      </Html>
+
       {/* Mailbox out front */}
-      <group position={[0.9, 0, 1.0]}>
+      <group position={[1.1, 0, 1.1]}>
         <mesh position={[0, 0.3, 0]}>
           <cylinderGeometry args={[0.03, 0.03, 0.6, 6]} />
           <meshStandardMaterial color="#555" />
         </mesh>
         <mesh position={[0, 0.6, 0]}>
           <boxGeometry args={[0.2, 0.2, 0.15]} />
-          <meshStandardMaterial color="#1565C0" />
-        </mesh>
-        {/* Red mailbox */}
-        <mesh position={[-0.35, 0.6, 0]}>
-          <boxGeometry args={[0.2, 0.25, 0.15]} />
-          <meshStandardMaterial color="#C62828" />
+          <meshStandardMaterial color={accentColor} />
         </mesh>
       </group>
 
-      {/* Lantern above door */}
-      <pointLight position={[0, 0.85, 0.9]} color="#FFCC00" intensity={0.5} distance={3} />
-      <mesh position={[0, 0.85, 0.8]}>
-        <sphereGeometry args={[0.04, 8, 8]} />
-        <meshBasicMaterial color="#FFCC00" />
-      </mesh>
+      {/* Lanterns flanking entrance */}
+      {[-0.5, 0.5].map((x, i) => (
+        <group key={`lantern-${i}`}>
+          <pointLight position={[x, 1.0, 1.0]} color="#FFCC00" intensity={0.4} distance={2.5} />
+          <mesh position={[x, 1.0, 0.95]}>
+            <sphereGeometry args={[0.035, 8, 8]} />
+            <meshBasicMaterial color="#FFCC00" />
+          </mesh>
+        </group>
+      ))}
     </group>
   )
 }
@@ -702,11 +823,11 @@ function WireLine({ from, to }: { from: THREE.Vector3; to: THREE.Vector3 }) {
    HTTP Delivery (Mailman 3D)
    ════════════════════════════════════════════ */
 
-function MailmanDelivery({ delivery, fromPos, toPos }: {
-  delivery: Delivery; fromPos: THREE.Vector3; toPos: THREE.Vector3
+function MailmanDelivery({ delivery, fromPos, toPos, postOfficePos }: {
+  delivery: Delivery; fromPos: THREE.Vector3; toPos: THREE.Vector3; postOfficePos: THREE.Vector3
 }) {
   const groupRef = useRef<THREE.Group>(null)
-  const poDoor = useMemo(() => new THREE.Vector3(POST_OFFICE_POS.x, 0, POST_OFFICE_POS.z + 0.8), [])
+  const poDoor = useMemo(() => new THREE.Vector3(postOfficePos.x, 0, postOfficePos.z + 1.1), [postOfficePos])
   const senderDoor = useMemo(() => new THREE.Vector3(fromPos.x, 0, fromPos.z + 0.5), [fromPos])
   const recipientDoor = useMemo(() => new THREE.Vector3(toPos.x, 0, toPos.z + 0.5), [toPos])
 
@@ -763,6 +884,9 @@ function MailmanDelivery({ delivery, fromPos, toPos }: {
     }
   })
 
+  const isPayment = delivery.method === 'payment'
+  const envelopeColor = isPayment ? '#22c55e' : 'white'
+
   // Pickup indicator at sender's house
   if (delivery.phase === 'at-sender') {
     return (
@@ -780,7 +904,7 @@ function MailmanDelivery({ delivery, fromPos, toPos }: {
             fontFamily: 'monospace',
             whiteSpace: 'nowrap',
           }}>
-            📬 Picking up
+            {isPayment ? '💰 Picking up payment' : '📬 Picking up'}
           </div>
         </Html>
       </group>
@@ -790,12 +914,30 @@ function MailmanDelivery({ delivery, fromPos, toPos }: {
   return (
     <group ref={groupRef}>
       <MailmanModel />
-      {/* Letter — only visible when carrying */}
+      {/* Letter / payment envelope — only visible when carrying */}
       {hasLetter && (
-        <mesh position={[0.12, 0.35, 0.05]} rotation={[0, 0, 0.3]}>
-          <boxGeometry args={[0.15, 0.1, 0.02]} />
-          <meshBasicMaterial color="white" />
-        </mesh>
+        <group position={[0.12, 0.35, 0.05]} rotation={[0, 0, 0.3]}>
+          <mesh>
+            <boxGeometry args={[0.15, 0.1, 0.02]} />
+            <meshBasicMaterial color={envelopeColor} />
+          </mesh>
+          {isPayment && (
+            <Html position={[0, 0.12, 0]} center distanceFactor={6} style={{ pointerEvents: 'none' }}>
+              <div style={{
+                background: '#16a34a',
+                color: 'white',
+                padding: '1px 4px',
+                borderRadius: '2px',
+                fontSize: '8px',
+                fontWeight: 'bold',
+                fontFamily: 'monospace',
+                whiteSpace: 'nowrap',
+              }}>
+                💸 BSV
+              </div>
+            </Html>
+          )}
+        </group>
       )}
     </group>
   )
@@ -987,23 +1129,25 @@ export function TownScene({ participants, deliveries, myKey, selectedPerson, onS
         <Ground />
         <Road />
 
-        {/* Post Office */}
-        <PostOffice3D />
+        {/* Post Offices */}
+        <PostOffice3D position={POST_OFFICE_A_POS} label="Babbage" accentColor="#C62828" />
+        <PostOffice3D position={POST_OFFICE_B_POS} label="BSVA" accentColor="#1565C0" />
 
         {/* Streetlamps */}
-        <Streetlamp position={[-4.5, 0, 3.8]} />
-        <Streetlamp position={[4.5, 0, 3.8]} />
-        <Streetlamp position={[-1.5, 0, 1.5]} />
-        <Streetlamp position={[1.5, 0, 1.5]} />
+        <Streetlamp position={[-5.5, 0, 3.8]} />
+        <Streetlamp position={[5.5, 0, 3.8]} />
+        <Streetlamp position={[0.25, 0, 1.0]} />
+        <Streetlamp position={[-4.5, 0, 1.5]} />
+        <Streetlamp position={[5, 0, 1.5]} />
 
-        {/* Trees — placed away from house positions */}
+        {/* Trees — placed away from buildings */}
         <Tree position={[-7, 0, 5.5]} scale={1.0} />
         <Tree position={[7, 0, 5.0]} scale={1.2} />
-        <Tree position={[-5.5, 0, 0]} scale={0.8} />
-        <Tree position={[5.5, 0, 0.5]} scale={0.9} />
-        <Tree position={[-2.5, 0, -1.5]} scale={0.7} />
-        <Tree position={[3, 0, -1.5]} scale={0.8} />
-        <Tree position={[0, 0, -2]} scale={0.65} />
+        <Tree position={[-6, 0, -0.5]} scale={0.8} />
+        <Tree position={[6.5, 0, -0.5]} scale={0.9} />
+        <Tree position={[-3.5, 0, -2]} scale={0.7} />
+        <Tree position={[4, 0, -2]} scale={0.8} />
+        <Tree position={[0.25, 0, -1.5]} scale={0.65} />
 
         {/* Fences — behind the houses */}
         <Fence start={[-7.5, 0, 7]} end={[-2, 0, 7]} />
@@ -1038,13 +1182,17 @@ export function TownScene({ participants, deliveries, myKey, selectedPerson, onS
         {deliveries.map(d => {
           const fromIdx = participants.findIndex(p => p.identityKey === d.from)
           const toIdx = participants.findIndex(p => p.identityKey === d.to)
-          const fromPos = positions[fromIdx] ?? new THREE.Vector3(-3, 0, 3)
-          const toPos = positions[toIdx] ?? new THREE.Vector3(3, 0, 3)
+          const fromPos = positions[fromIdx] ?? new THREE.Vector3(-3, 0, 4.5)
+          const toPos = positions[toIdx] ?? new THREE.Vector3(3, 0, 4.5)
 
           if (d.method === 'socket') {
             return <SocketSignalDelivery key={d.id} delivery={d} fromPos={fromPos} toPos={toPos} />
           }
-          return <MailmanDelivery key={d.id} delivery={d} fromPos={fromPos} toPos={toPos} />
+          // Route through the correct post office based on the resolved host
+          const poPos = (d.host && d.host !== BABBAGE_HOST)
+            ? POST_OFFICE_B_POS
+            : POST_OFFICE_A_POS
+          return <MailmanDelivery key={d.id} delivery={d} fromPos={fromPos} toPos={toPos} postOfficePos={poPos} />
         })}
       </Canvas>
     </div>

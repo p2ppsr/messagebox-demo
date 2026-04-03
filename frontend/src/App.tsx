@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { MessageBoxClient } from '@bsv/message-box-client'
+import { MessageBoxClient, PeerPayClient } from '@bsv/message-box-client'
 import { WalletClient } from '@bsv/sdk'
 import type { DisplayableIdentity } from '@bsv/sdk'
 import { Scene } from './components/Scene'
@@ -39,6 +39,7 @@ export default function App() {
   const [log, setLog] = useState<string[]>([])
 
   const clientRef = useRef<MessageBoxClient | null>(null)
+  const peerPayRef = useRef<PeerPayClient | null>(null)
   const myKeyRef = useRef('')
   const seenIdsRef = useRef<Set<string>>(new Set())
   const deliveryIdRef = useRef(0)
@@ -60,7 +61,7 @@ export default function App() {
     })
   }, [])
 
-  const triggerDelivery = useCallback((from: string, to: string, text: string, method: SendMethod) => {
+  const triggerDelivery = useCallback((from: string, to: string, text: string, method: SendMethod, host?: string) => {
     const id = ++deliveryIdRef.current
 
     if (method === 'socket') {
@@ -74,7 +75,7 @@ export default function App() {
     } else {
       // HTTP: mailman leaves PO → goes to sender → picks up letter → returns to PO → delivers to recipient → returns to PO
       setDeliveries(prev => [...prev, {
-        id, from, to, text, phase: 'to-sender' as const, startTime: Date.now(), method
+        id, from, to, text, phase: 'to-sender' as const, startTime: Date.now(), method, host
       }])
       // Phase 2: arrive at sender's house, pick up letter
       setTimeout(() => {
@@ -131,6 +132,13 @@ export default function App() {
         await client.init(MESSAGE_BOX_HOST)
         clientRef.current = client
         addLog('MessageBox client initialized')
+
+        const peerPay = new PeerPayClient({
+          walletClient,
+          messageBoxHost: MESSAGE_BOX_HOST
+        })
+        peerPayRef.current = peerPay
+        addLog('PeerPay client initialized')
 
         // Mark as connected now — WebSocket is optional for anointment features
         if (!mounted) return
@@ -280,6 +288,7 @@ export default function App() {
 
     try {
       let resultId: string
+      let resolvedHost: string | undefined
 
       if (sendMethod === 'socket') {
         // Real-time via WebSocket
@@ -292,19 +301,27 @@ export default function App() {
         resultId = result.messageId
         addLog(`✅ Sent via WebSocket (live)`)
       } else {
-        // Store-and-forward via HTTP
+        // Resolve the recipient's anointed host
+        try {
+          resolvedHost = await clientRef.current.resolveHostForRecipient(recipient)
+          addLog(`🔍 Resolved host for ${shortKey(recipient)}: ${resolvedHost}`)
+        } catch {
+          resolvedHost = MESSAGE_BOX_HOST
+        }
+
+        // Store-and-forward via HTTP — send to the resolved host
         const result = await clientRef.current.sendMessage({
           recipient,
           messageBox: MESSAGE_BOX_NAME,
           body: text,
           skipEncryption: true
-        }, MESSAGE_BOX_HOST)
+        })
         resultId = result.messageId
-        addLog(`✅ Sent via HTTP (store-and-forward)`)
+        addLog(`✅ Sent via HTTP to ${resolvedHost}`)
       }
 
       // Animate the outbound delivery
-      triggerDelivery(myKey, recipient, text, sendMethod)
+      triggerDelivery(myKey, recipient, text, sendMethod, resolvedHost)
 
       // Optimistically add the sent message
       const msgDelay = sendMethod === 'socket' ? 1500 : 4800
@@ -325,6 +342,56 @@ export default function App() {
       const msg = err instanceof Error ? err.message : 'Unknown error'
       addLog(`❌ Send failed: ${msg}`)
       console.error('Failed to send message:', err)
+    }
+  }
+
+  // Send a payment to the selected person
+  const handleSendPayment = async (amount: number, via: 'socket' | 'http') => {
+    if (!peerPayRef.current || !myKey || !selectedPerson || amount <= 0) return
+
+    const recipient = selectedPerson
+    const label = via === 'socket' ? 'live' : 'HTTP'
+    addLog(`💸 Sending ${amount} sats to ${shortKey(recipient)} via PeerPay (${label})...`)
+
+    try {
+      if (via === 'socket') {
+        await peerPayRef.current.sendLivePayment({ recipient, amount })
+      } else {
+        await peerPayRef.current.sendPayment({ recipient, amount })
+      }
+      addLog(`✅ Payment of ${amount} sats sent via ${label}!`)
+
+      // Animate — socket payments travel along the wire, HTTP payments use the mailman with green envelope
+      let resolvedHost: string | undefined
+      if (via === 'http') {
+        try {
+          resolvedHost = await clientRef.current?.resolveHostForRecipient(recipient)
+        } catch {
+          resolvedHost = MESSAGE_BOX_HOST
+        }
+        triggerDelivery(myKey, recipient, `${amount} sats`, 'payment', resolvedHost)
+      } else {
+        triggerDelivery(myKey, recipient, `${amount} sats`, 'socket')
+      }
+
+      // Add to message list — use the tab's method so it appears in the right tab
+      const paymentId = `payment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      const msgDelay = via === 'socket' ? 1500 : 4800
+      setTimeout(() => {
+        setMessages(prev => [...prev, {
+          id: paymentId,
+          text: `${amount} sats`,
+          sender: myKey,
+          recipient,
+          timestamp: Date.now(),
+          method: via,
+          amount
+        }])
+      }, msgDelay)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error'
+      addLog(`❌ Payment failed: ${msg}`)
+      console.error('Failed to send payment:', err)
     }
   }
 
@@ -458,6 +525,7 @@ export default function App() {
           composeInput={composeInput}
           onComposeChange={setComposeInput}
           onSend={handleSend}
+          onSendPayment={handleSendPayment}
           onCheckMailbox={handleCheckMailbox}
           disabled={status !== 'connected'}
         />
@@ -474,7 +542,7 @@ export default function App() {
         <p>
           Messages are sent to <strong>MessageBox</strong> at{' '}
           <code>{MESSAGE_BOX_HOST}</code>.{' '}
-          <strong>HTTP</strong> = store-and-forward (sendMessage) · <strong>Socket</strong> = real-time (sendLiveMessage).
+          <strong>HTTP</strong> = store-and-forward (sendMessage) · <strong>Socket</strong> = real-time (sendLiveMessage) · <strong>Pay</strong> = peer payments (PeerPayClient).
           Click "Check Mailbox" to retrieve stored messages via listMessages.
         </p>
       </footer>

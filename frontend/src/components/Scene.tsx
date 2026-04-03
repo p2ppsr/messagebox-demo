@@ -26,12 +26,12 @@ export function Scene({ participants, deliveries, myKey, selectedPerson, onSelec
       {deliveries.length > 0 && (
         <div className="delivery-status">
           {deliveries.map(d => (
-            <div key={d.id} className={`delivery-pill ${d.phase}`}>
-              {d.method === 'http' ? '📮' : '⚡'}
-              {d.phase === 'to-sender' && ' Mailman → Your house'}
-              {d.phase === 'at-sender' && ' 📬 Picking up letter'}
+            <div key={d.id} className={`delivery-pill ${d.phase} ${d.method === 'payment' ? 'delivery-payment' : ''}`}>
+              {d.method === 'payment' ? '💸' : d.method === 'http' ? '📮' : '⚡'}
+              {d.phase === 'to-sender' && (d.method === 'payment' ? ' Mailman → Your house' : ' Mailman → Your house')}
+              {d.phase === 'at-sender' && (d.method === 'payment' ? ' 💰 Picking up payment' : ' 📬 Picking up letter')}
               {d.phase === 'to-postoffice' && ' → Post Office'}
-              {d.phase === 'to-recipient' && ' → Delivering to house'}
+              {d.phase === 'to-recipient' && (d.method === 'payment' ? ' → Delivering payment' : ' → Delivering to house')}
               {d.phase === 'returning' && ' → Returning to Post Office'}
               {d.phase === 'direct' && ' Direct Signal'}
             </div>
